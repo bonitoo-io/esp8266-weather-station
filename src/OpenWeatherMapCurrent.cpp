@@ -51,7 +51,7 @@ void OpenWeatherMapCurrent::doUpdate(OpenWeatherMapCurrentData *data, const Stri
   //Serial.printf_P(PSTR("[HTTP] Requesting resource at http://%s:%u%s\n"), host.c_str(), port, path.c_str());
 
   WiFiClient client;
-  if(client.connect(host, port)) {
+  if(client.connect(host.c_str(), port)) {
     bool isBody = false;
     char c;
 
