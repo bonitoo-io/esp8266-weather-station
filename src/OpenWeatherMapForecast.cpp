@@ -69,7 +69,7 @@ uint8_t OpenWeatherMapForecast::doUpdate(OpenWeatherMapForecastData *data, Strin
           Serial.println("[HTTP] lost in client with a timeout");
           client.stop();
           this->data = nullptr;
-          return;
+          return currentForecast;
         }
         c = client.read();
         if (c == '{' || c == '[') {
