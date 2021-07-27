@@ -65,7 +65,8 @@ void OpenWeatherMapCurrent::doUpdate(OpenWeatherMapCurrentData *data, String pat
         if ((millis() - lost_do) > lostTest) {
           Serial.println("[HTTP] lost in client with a timeout");
           client.stop();
-          ESP.restart();
+          this->data = nullptr;
+          return;
         }
         c = client.read();
         if (c == '{' || c == '[') {
