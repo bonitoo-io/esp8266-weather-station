@@ -30,16 +30,15 @@ OpenWeatherMapCurrent::OpenWeatherMapCurrent() {
 }
 
 void OpenWeatherMapCurrent::updateCurrent(OpenWeatherMapCurrentData *data, String appId, String location) {
-  doUpdate(data, buildPath(appId, "q=" + location));
+  doUpdate(data, buildPath(appId, String(F("q=")) + location));
 }
 
 void OpenWeatherMapCurrent::updateCurrentById(OpenWeatherMapCurrentData *data, String appId, String locationId) {
-  doUpdate(data, buildPath(appId, "id=" + locationId));
+  doUpdate(data, buildPath(appId, String(F("id=")) + locationId));
 }
 
 String OpenWeatherMapCurrent::buildPath(String appId, String locationParameter) {
-  String units = metric ? "metric" : "imperial";
-  return "/data/2.5/weather?" + locationParameter + "&appid=" + appId + "&units=" + units + "&lang=" + language;
+  return String(F("/data/2.5/weather?")) + locationParameter + String(F("&appid=")) + appId + String(F("&units=")) + (metric ? String(F("metric")) : String(F("imperial"))) + String(F("&lang=")) + language;
 }
 
 void OpenWeatherMapCurrent::doUpdate(OpenWeatherMapCurrentData *data, String path) {
@@ -49,21 +48,21 @@ void OpenWeatherMapCurrent::doUpdate(OpenWeatherMapCurrentData *data, String pat
   this->data = data;
   JsonStreamingParser parser;
   parser.setListener(this);
-  Serial.printf("[HTTP] Requesting resource at http://%s:%u%s\n", host.c_str(), port, path.c_str());
+  //Serial.printf_P(PSTR("[HTTP] Requesting resource at http://%s:%u%s\n"), host.c_str(), port, path.c_str());
 
   WiFiClient client;
   if(client.connect(host, port)) {
     bool isBody = false;
     char c;
-    Serial.println("[HTTP] connected, now GETting data");
-    client.print("GET " + path + " HTTP/1.1\r\n"
-                 "Host: " + host + "\r\n"
-                 "Connection: close\r\n\r\n");
+
+    client.print(String(F("GET ")) + path + String(F(" HTTP/1.1\r\n")) +
+                 String(F("Host: ")) + host + String(F("\r\n")) +
+                 String(F("Connection: close\r\n\r\n")));
 
     while (client.connected() || client.available()) {
       if (client.available()) {
         if ((millis() - lost_do) > lostTest) {
-          Serial.println("[HTTP] lost in client with a timeout");
+          Serial.println(F("[HTTP] lost in client with a timeout"));
           client.stop();
           this->data = nullptr;
           return;
@@ -81,115 +80,109 @@ void OpenWeatherMapCurrent::doUpdate(OpenWeatherMapCurrentData *data, String pat
     }
     client.stop();
   } else {
-    Serial.println("[HTTP] failed to connect to host");
+    Serial.println(F("[HTTP] failed to connect to host"));
   }
   this->data = nullptr;
 }
 
 void OpenWeatherMapCurrent::whitespace(char c) {
-  Serial.println("whitespace");
 }
 
 void OpenWeatherMapCurrent::startDocument() {
-  Serial.println("start document");
 }
 
 void OpenWeatherMapCurrent::key(String key) {
-  currentKey = String(key);
+  currentKey = key;
 }
 
+int8_t OpenWeatherMapCurrent::getArrIndex( const char* s, const char* arr) {
+  uint8_t index = 0;
+  uint8_t i = 0;
+  uint8_t i1 = 0;
+  //Serial.println( "Find: " + String(s));
+  while ((pgm_read_byte(arr + i) != '\0') || (i1 > 0)) {
+    //Serial.println( String(s[i1]) + String((char)pgm_read_byte( arr + i)) + " " + String(i) + "-" + String(i1));
+		if (s[i1] == pgm_read_byte( arr + i)) {
+      i1++;
+      if ( s[i1] == '\0') {  //the whole word matches, return index
+			  //Serial.println( "Found key: `" + String(s) + "` " + String(index));
+        return index;
+		  }
+    } else {
+      while (pgm_read_byte( arr + i) != '\0') { //skip rest of the unmatching key
+			  //Serial.println(String((char)pgm_read_byte( arr + i)) + " " + String(i));
+        i++;
+			}
+      index++;  
+      i1 = 0;
+    }
+    i++;
+  }
+	//Serial.println( "Missing key: `" + String(s) + "` " + String(i));
+  return -1;
+}
+
+const char sKeysCurr[] PROGMEM = "all\0country\0deg\0description\0dt\0humidity\0icon\0id\0lat\0lon\0main\0name\0pressure\0speed\0sunrise\0sunset\0temp\0temp_max\0temp_min\0visibility\0\0";
+enum tKeysCurr { s_all=0,s_country,s_deg,s_description,s_dt,s_humidity,s_icon,s_id,s_lat,s_lon,s_main,s_name,s_pressure,s_speed,s_sunrise,s_sunset,s_temp,s_temp_max,s_temp_min,s_visibility};
+
 void OpenWeatherMapCurrent::value(String value) {
-  // "lon": 8.54, float lon;
-  if (currentKey == "lon") {
-    this->data->lon = value.toFloat();
-  }
-  // "lat": 47.37 float lat;
-  if (currentKey == "lat") {
-    this->data->lat = value.toFloat();
-  }
+  tKeysCurr k = (tKeysCurr) getArrIndex( currentKey.c_str(), sKeysCurr);
+
   // weatherItemCounter: only get the first item if more than one is available
-  if (currentParent == "weather" && weatherItemCounter == 0) {
-    // "id": 521, weatherId weatherId;
-    if (currentKey == "id") {
-      this->data->weatherId = value.toInt();
+  if (currentParent == String(F("weather")) && weatherItemCounter == 0) {
+    switch (k) {
+      // "id": 521, weatherId weatherId;
+      case s_id: this->data->weatherId = value.toInt(); break;
+      // "main": "Rain", String main;
+      case s_main: this->data->weatherId = value.toInt(); break;
+      // "description": "shower rain", String description;
+      case s_description: this->data->description = value; break;
+      // "icon": "09d" String icon;
+      //String iconMeteoCon;
+      case s_icon: 
+			  this->data->icon = value;
+				this->data->iconMeteoCon = getMeteoconIcon(value);
+			break;
     }
-    // "main": "Rain", String main;
-    if (currentKey == "main") {
-      this->data->main = value;
-    }
-    // "description": "shower rain", String description;
-    if (currentKey == "description") {
-      this->data->description = value;
-    }
-    // "icon": "09d" String icon;
-   //String iconMeteoCon;
-    if (currentKey == "icon") {
-      this->data->icon = value;
-      this->data->iconMeteoCon = getMeteoconIcon(value);
-    }
-
   }
 
-  // "temp": 290.56, float temp;
-  if (currentKey == "temp") {
-    this->data->temp = value.toFloat();
-  }
-  // "pressure": 1013, uint16_t pressure;
-  if (currentKey == "pressure") {
-    this->data->pressure = value.toInt();
-  }
-  // "humidity": 87, uint8_t humidity;
-  if (currentKey == "humidity") {
-    this->data->humidity = value.toInt();
-  }
-  // "temp_min": 289.15, float tempMin;
-  if (currentKey == "temp_min") {
-    this->data->tempMin = value.toFloat();
-  }
-  // "temp_max": 292.15 float tempMax;
-  if (currentKey == "temp_max") {
-    this->data->tempMax = value.toFloat();
-  }
-  // visibility: 10000, uint16_t visibility;
-  if (currentKey == "visibility") {
-    this->data->visibility = value.toInt();
-  }
-  // "wind": {"speed": 1.5}, float windSpeed;
-  if (currentKey == "speed") {
-    this->data->windSpeed = value.toFloat();
-  }
-  // "wind": {deg: 226.505}, float windDeg;
-  if (currentKey == "deg") {
-    this->data->windDeg = value.toFloat();
-  }
-  // "clouds": {"all": 90}, uint8_t clouds;
-  if (currentKey == "all") {
-    this->data->clouds = value.toInt();
-  }
-  // "dt": 1527015000, uint64_t observationTime;
-  if (currentKey == "dt") {
-    this->data->observationTime = value.toInt();
-  }
-  // "country": "CH", String country;
-  if (currentKey == "country") {
-    this->data->country = value;
-  }
-  // "sunrise": 1526960448, uint32_t sunrise;
-  if (currentKey == "sunrise") {
-    this->data->sunrise = value.toInt();
-  }
-  // "sunset": 1527015901 uint32_t sunset;
-  if (currentKey == "sunset") {
-    this->data->sunset = value.toInt();
-  }
-  // "name": "Zurich", String cityName;
-  if (currentKey == "name") {
-    this->data->cityName = value;
+  switch (k) {
+    // "lon": 8.54, float lon;
+    case s_lon: this->data->lon = value.toFloat(); break;
+    // "lat": 47.37 float lat;
+    case s_lat: this->data->lat = value.toFloat(); break;
+		// "temp": 290.56, float temp;
+		case s_temp: this->data->temp = value.toFloat(); break;
+		// "pressure": 1013, uint16_t pressure;
+		case s_pressure: this->data->pressure = value.toInt(); break;
+		// "humidity": 87, uint8_t humidity;
+		case s_humidity: this->data->humidity = value.toInt(); break;
+		// "temp_min": 289.15, float tempMin;
+		case s_temp_min: this->data->tempMin = value.toFloat(); break;
+		// "temp_max": 292.15 float tempMax;
+		case s_temp_max: this->data->tempMax = value.toFloat(); break;
+		// visibility: 10000, uint16_t visibility;
+		case s_visibility: this->data->visibility = value.toInt(); break;
+		// "wind": {"speed": 1.5}, float windSpeed;
+		case s_speed: this->data->windSpeed = value.toFloat(); break;
+		// "wind": {deg: 226.505}, float windDeg;
+		case s_deg: this->data->windDeg = value.toFloat(); break;
+		// "clouds": {"all": 90}, uint8_t clouds;
+		case s_all: this->data->clouds = value.toInt(); break;
+		// "dt": 1527015000, uint64_t observationTime;
+		case s_dt: this->data->observationTime = value.toInt(); break;
+		// "country": "CH", String country;
+		case s_country: this->data->country = value; break;
+		// "sunrise": 1526960448, uint32_t sunrise;
+		case s_sunrise: this->data->sunrise = value.toInt(); break;
+		// "sunset": 1527015901 uint32_t sunset;
+		case s_sunset: this->data->sunset = value.toInt(); break;
+		// "name": "Zurich", String cityName;
+		case s_name: this->data->cityName = value; break;
   }
 }
 
 void OpenWeatherMapCurrent::endArray() {
-
 }
 
 
@@ -198,104 +191,32 @@ void OpenWeatherMapCurrent::startObject() {
 }
 
 void OpenWeatherMapCurrent::endObject() {
-  if (currentParent == "weather") {
+  if (currentParent == String(F("weather"))) {
     weatherItemCounter++;
   }
-  currentParent = "";
+  currentParent = String(F(""));
 }
 
 void OpenWeatherMapCurrent::endDocument() {
-
 }
 
 void OpenWeatherMapCurrent::startArray() {
-
 }
 
+const char sIconFrom[] PROGMEM = "01d01n02d02n03d03n04d04n09d09n10d10n11d11n13d13n50d50n";
+const char sIconTo[] PROGMEM = "BCH4N5Y%R8Q7P6W#MM";
 
-String OpenWeatherMapCurrent::getMeteoconIcon(String icon) {
- 	// clear sky
-  // 01d
-  if (icon == "01d") 	{
-    return "B";
+char OpenWeatherMapCurrent::getMeteoconIcon(const String& icon) {
+  for (uint8_t i=0; i < sizeof(sIconFrom) - 1; i+=3) { //try to find string in the translation table
+    for (uint8_t i1=0; i1 < 3; i1++) {
+      if (icon[i1] != pgm_read_byte( sIconFrom + i + i1))
+        break;
+      if (i1==2) { //Found string
+        //Serial.println( "Icon: " + icon + " " + String((char)pgm_read_byte( sIconTo+(i/3))));
+				return pgm_read_byte( sIconTo+(i/3));
+		  }
+    }
   }
-  // 01n
-  if (icon == "01n") 	{
-    return "C";
-  }
-  // few clouds
-  // 02d
-  if (icon == "02d") 	{
-    return "H";
-  }
-  // 02n
-  if (icon == "02n") 	{
-    return "4";
-  }
-  // scattered clouds
-  // 03d
-  if (icon == "03d") 	{
-    return "N";
-  }
-  // 03n
-  if (icon == "03n") 	{
-    return "5";
-  }
-  // broken clouds
-  // 04d
-  if (icon == "04d") 	{
-    return "Y";
-  }
-  // 04n
-  if (icon == "04n") 	{
-    return "%";
-  }
-  // shower rain
-  // 09d
-  if (icon == "09d") 	{
-    return "R";
-  }
-  // 09n
-  if (icon == "09n") 	{
-    return "8";
-  }
-  // rain
-  // 10d
-  if (icon == "10d") 	{
-    return "Q";
-  }
-  // 10n
-  if (icon == "10n") 	{
-    return "7";
-  }
-  // thunderstorm
-  // 11d
-  if (icon == "11d") 	{
-    return "P";
-  }
-  // 11n
-  if (icon == "11n") 	{
-    return "6";
-  }
-  // snow
-  // 13d
-  if (icon == "13d") 	{
-    return "W";
-  }
-  // 13n
-  if (icon == "13n") 	{
-    return "#";
-  }
-  // mist
-  // 50d
-  if (icon == "50d") 	{
-    return "M";
-  }
-  // 50n
-  if (icon == "50n") 	{
-    return "M";
-  }
-  // Nothing matched: N/A
-  return ")";
-
+	//Serial.println( "Missing icon: " + icon);
+  return ')';  // Nothing matched: N/A
 }

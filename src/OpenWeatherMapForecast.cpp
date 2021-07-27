@@ -24,24 +24,23 @@
 #include <ESPWiFi.h>
 #include <WiFiClient.h>
 #include "OpenWeatherMapForecast.h"
+#include "OpenWeatherMapCurrent.h"
 
 OpenWeatherMapForecast::OpenWeatherMapForecast() {
-
 }
 
 uint8_t OpenWeatherMapForecast::updateForecasts(OpenWeatherMapForecastData *data, String appId, String location, uint8_t maxForecasts) {
   this->maxForecasts = maxForecasts;
-  return doUpdate(data, buildPath(appId, "q=" + location));
+  return doUpdate(data, buildPath(appId, String(F("q=")) + location));
 }
 
 uint8_t OpenWeatherMapForecast::updateForecastsById(OpenWeatherMapForecastData *data, String appId, String locationId, uint8_t maxForecasts) {
   this->maxForecasts = maxForecasts;
-  return doUpdate(data, buildPath(appId, "id=" + locationId));
+  return doUpdate(data, buildPath(appId, String(F("id=")) + locationId));
 }
 
 String OpenWeatherMapForecast::buildPath(String appId, String locationParameter) {
-  String units = metric ? "metric" : "imperial";
-  return "/data/2.5/forecast?" + locationParameter + "&appid=" + appId + "&units=" + units + "&lang=" + language;
+  return String(F("/data/2.5/forecast?")) + locationParameter + String(F("&appid=")) + appId + String(F("&units=")) + (metric ? String(F("metric")) : String(F("imperial"))) + String(F("&lang=")) + language;
 }
 
 uint8_t OpenWeatherMapForecast::doUpdate(OpenWeatherMapForecastData *data, String path) {
@@ -52,21 +51,21 @@ uint8_t OpenWeatherMapForecast::doUpdate(OpenWeatherMapForecastData *data, Strin
   this->data = data;
   JsonStreamingParser parser;
   parser.setListener(this);
-  Serial.printf("[HTTP] Requesting resource at http://%s:%u%s\n", host.c_str(), port, path.c_str());
+  //Serial.printf_P(PSTR("[HTTP] Requesting resource at http://%s:%u%s\n"), host.c_str(), port, path.c_str());
 
   WiFiClient client;
   if(client.connect(host, port)) {
     bool isBody = false;
     char c;
-    Serial.println("[HTTP] connected, now GETting data");
-    client.print("GET " + path + " HTTP/1.1\r\n"
-                 "Host: " + host + "\r\n"
-                 "Connection: close\r\n\r\n");
+
+    client.print(String(F("GET ")) + path + String(F(" HTTP/1.1\r\n")) +
+                 String(F("Host: ")) + host + String(F("\r\n")) +
+                 String(F("Connection: close\r\n\r\n")));
 
     while (client.connected() || client.available()) {
       if (client.available()) {
         if ((millis() - lost_do) > lostTest) {
-          Serial.println("[HTTP] lost in client with a timeout");
+          Serial.println(F("[HTTP] lost in client with a timeout"));
           client.stop();
           this->data = nullptr;
           return currentForecast;
@@ -84,30 +83,33 @@ uint8_t OpenWeatherMapForecast::doUpdate(OpenWeatherMapForecastData *data, Strin
     }
     client.stop();
   } else {
-    Serial.println("[HTTP] failed to connect to host");
+    Serial.println(F("[HTTP] failed to connect to host"));
   }
   this->data = nullptr;
   return currentForecast;
 }
 
 void OpenWeatherMapForecast::whitespace(char c) {
-  Serial.println("whitespace");
 }
 
 void OpenWeatherMapForecast::startDocument() {
-  Serial.println("start document");
 }
 
 void OpenWeatherMapForecast::key(String key) {
-  currentKey = String(key);
+  currentKey = key;
 }
+
+const char sKeysFor[] PROGMEM = "3h\0description\0icon\0id\0main\0all\0deg\0dt\0dt_txt\0feels_like\0grnd_level\0humidity\0pressure\0sea_level\0speed\0temp\0temp_max\0temp_min\0\0";
+enum tKeysFor { s_3h=0,s_description,s_icon,s_id,s_main,s_all,s_deg,s_dt,s_dt_txt,s_feels_like,s_grnd_level,s_humidity,s_pressure,s_sea_level,s_speed,s_temp,s_temp_max,s_temp_min};
 
 void OpenWeatherMapForecast::value(String value) {
   if (currentForecast >= maxForecasts) {
     return;
   }
+	tKeysFor k = (tKeysFor) OpenWeatherMapCurrent::getArrIndex( currentKey.c_str(), sKeysFor);
+	
   // {"dt":1527066000,  uint32_t observationTime;
-  if (currentKey == "dt") {
+  if (k == s_dt) {
     data[currentForecast].observationTime = value.toInt();
 
     if (allowedHoursCount > 0) {
@@ -128,92 +130,64 @@ void OpenWeatherMapForecast::value(String value) {
   if (!isCurrentForecastAllowed) {
     return;
   }
-  // "main":{
-  //   "temp":17.35, float temp;
-  if (currentKey == "temp") {
-    data[currentForecast].temp = value.toFloat();
-    // initialize potentially empty values:
-    data[currentForecast].rain = 0;;
-  }
-  //   "feels_like": 16.99, float feelsLike;
-  if (currentKey == "feels_like") {
-    data[currentForecast].feelsLike = value.toFloat();
-  }
-  //   "temp_min":16.89, float tempMin;
-  if (currentKey == "temp_min") {
-    data[currentForecast].tempMin = value.toFloat();
-  }
-  //   "temp_max":17.35,float tempMax;
-  if (currentKey == "temp_max") {
-    data[currentForecast].tempMax = value.toFloat();
-  }
-  //   "pressure":970.8,float pressure;
-  if (currentKey == "pressure") {
-    data[currentForecast].pressure = value.toFloat();
-  }
-  //   "sea_level":1030.62,float pressureSeaLevel;
-  if (currentKey == "sea_level") {
-    data[currentForecast].pressureSeaLevel = value.toFloat();
-  }
-  //   "grnd_level":970.8,float pressureGroundLevel;
-  if (currentKey == "grnd_level") {
-    data[currentForecast].pressureGroundLevel = value.toFloat();
-  }
-  //   "":97,uint8_t humidity;
-  if (currentKey == "humidity") {
-    data[currentForecast].humidity = value.toInt();
-  }
-  //   "temp_kf":0.46
-  // },"weather":[{
-
-  if (currentParent == "weather") {
-    //   "id":802,uint16_t weatherId;
-    if (currentKey == "id") {
-      data[currentForecast].weatherId = value.toInt();
+	
+	switch (k) {	
+		// "main":{
+		//   "temp":17.35, float temp;
+		case s_temp: 
+			data[currentForecast].temp = value.toFloat();
+			// initialize potentially empty values:
+			data[currentForecast].rain = 0;
+		break;
+		//   "feels_like": 16.99, float feelsLike;
+		case s_feels_like: data[currentForecast].feelsLike = value.toFloat(); break;
+		//   "temp_min":16.89, float tempMin;
+		case s_temp_min: data[currentForecast].tempMin = value.toFloat(); break;
+		//   "temp_max":17.35,float tempMax;
+		case s_temp_max: data[currentForecast].tempMax = value.toFloat(); break;
+		//   "pressure":970.8,float pressure;
+		case s_pressure: data[currentForecast].pressure = value.toFloat(); break;
+		//   "sea_level":1030.62,float pressureSeaLevel;
+		case s_sea_level: data[currentForecast].pressureSeaLevel = value.toFloat(); break;
+		//   "grnd_level":970.8,float pressureGroundLevel;
+		case s_grnd_level: data[currentForecast].pressureGroundLevel = value.toFloat(); break;
+		//   "":97,uint8_t humidity;
+		case s_humidity: data[currentForecast].humidity = value.toInt(); break;
+		//   "temp_kf":0.46
+		// break;,"weather":[{
+		case s_all: data[currentForecast].clouds = value.toInt(); break;
+		// "wind":{
+		//   "speed":1.77, float windSpeed;
+		case s_speed: data[currentForecast].windSpeed = value.toFloat(); break;
+		//   "deg":207.501 float windDeg;
+		case s_deg: data[currentForecast].windDeg = value.toFloat(); break;
+		// rain: {3h: 0.055break;, float rain;
+		case s_3h: data[currentForecast].rain = value.toFloat(); break;
+		// break;,"sys":{"pod":"d"break;
+		// dt_txt: "2018-05-23 09:00:00"   String observationTimeText;
+		case s_dt_txt:
+			data[currentForecast].observationTimeText = value;
+			// this is not super save, if there is no dt_txt item we'll never get all forecasts;
+			currentForecast++;
+		break;
+	}
+	
+  if (currentParent == String(F("weather"))) {
+    switch (k) {
+      // "id": 521, weatherId weatherId;
+      case s_id: data[currentForecast].weatherId = value.toInt(); break;
+      // "main": "Rain", String main;
+      case s_main: data[currentForecast].main = value.toInt(); break;
+      // "description": "shower rain", String description;
+      case s_description: data[currentForecast].description = value; break;
+      // "icon": "09d" String icon;
+      //String iconMeteoCon;
+      case s_icon: data[currentForecast].icon = value; data[currentForecast].iconMeteoCon = getMeteoconIcon(value); break;			
     }
-
-    //   "main":"Clouds",String main;
-    if (currentKey == "main") {
-      data[currentForecast].main = value;
-    }
-    //   "description":"scattered clouds",String description;
-    if (currentKey == "description") {
-      data[currentForecast].description = value;
-    }
-    //   "icon":"03d" String icon; String iconMeteoCon;
-    if (currentKey == "icon") {
-      data[currentForecast].icon = value;
-      data[currentForecast].iconMeteoCon = getMeteoconIcon(value);
-    }
-  }
-  // }],"clouds":{"all":44},uint8_t clouds;
-  if (currentKey == "all") {
-    data[currentForecast].clouds = value.toInt();
-  }
-  // "wind":{
-  //   "speed":1.77, float windSpeed;
-  if (currentKey == "speed") {
-    data[currentForecast].windSpeed = value.toFloat();
-  }
-  //   "deg":207.501 float windDeg;
-  if (currentKey == "deg") {
-    data[currentForecast].windDeg = value.toFloat();
-  }
-  // rain: {3h: 0.055}, float rain;
-  if (currentKey == "3h") {
-    data[currentForecast].rain = value.toFloat();
-  }
-  // },"sys":{"pod":"d"}
-  // dt_txt: "2018-05-23 09:00:00"   String observationTimeText;
-  if (currentKey == "dt_txt") {
-    data[currentForecast].observationTimeText = value;
-    // this is not super save, if there is no dt_txt item we'll never get all forecasts;
-    currentForecast++;
   }
 }
 
 void OpenWeatherMapForecast::endArray() {
-
 }
 
 
@@ -222,104 +196,18 @@ void OpenWeatherMapForecast::startObject() {
 }
 
 void OpenWeatherMapForecast::endObject() {
-  if (currentParent == "weather") {
+  if (currentParent == String(F("weather"))) {
     weatherItemCounter++;
   }
-  currentParent = "";
+  currentParent = String(F(""));
 }
 
 void OpenWeatherMapForecast::endDocument() {
-
 }
 
 void OpenWeatherMapForecast::startArray() {
-
 }
 
-
-String OpenWeatherMapForecast::getMeteoconIcon(String icon) {
- 	// clear sky
-  // 01d
-  if (icon == "01d") 	{
-    return "B";
-  }
-  // 01n
-  if (icon == "01n") 	{
-    return "C";
-  }
-  // few clouds
-  // 02d
-  if (icon == "02d") 	{
-    return "H";
-  }
-  // 02n
-  if (icon == "02n") 	{
-    return "4";
-  }
-  // scattered clouds
-  // 03d
-  if (icon == "03d") 	{
-    return "N";
-  }
-  // 03n
-  if (icon == "03n") 	{
-    return "5";
-  }
-  // broken clouds
-  // 04d
-  if (icon == "04d") 	{
-    return "Y";
-  }
-  // 04n
-  if (icon == "04n") 	{
-    return "%";
-  }
-  // shower rain
-  // 09d
-  if (icon == "09d") 	{
-    return "R";
-  }
-  // 09n
-  if (icon == "09n") 	{
-    return "8";
-  }
-  // rain
-  // 10d
-  if (icon == "10d") 	{
-    return "Q";
-  }
-  // 10n
-  if (icon == "10n") 	{
-    return "7";
-  }
-  // thunderstorm
-  // 11d
-  if (icon == "11d") 	{
-    return "P";
-  }
-  // 11n
-  if (icon == "11n") 	{
-    return "6";
-  }
-  // snow
-  // 13d
-  if (icon == "13d") 	{
-    return "W";
-  }
-  // 13n
-  if (icon == "13n") 	{
-    return "#";
-  }
-  // mist
-  // 50d
-  if (icon == "50d") 	{
-    return "M";
-  }
-  // 50n
-  if (icon == "50n") 	{
-    return "M";
-  }
-  // Nothing matched: N/A
-  return ")";
-
+char OpenWeatherMapForecast::getMeteoconIcon(const String& icon) {
+  return OpenWeatherMapCurrent::getMeteoconIcon( icon);
 }

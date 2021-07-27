@@ -56,7 +56,7 @@ typedef struct OpenWeatherMapForecastData {
   String description;
   //   "icon":"03d"
   String icon;
-  String iconMeteoCon;
+  char iconMeteoCon;
   // }],"clouds":{"all":44},
   uint8_t clouds;
   // "wind":{
@@ -106,7 +106,7 @@ class OpenWeatherMapForecast: public JsonListener {
     }
 
 
-    String getMeteoconIcon(String icon);
+    char getMeteoconIcon(const String& icon);
     virtual void whitespace(char c);
 
     virtual void startDocument();

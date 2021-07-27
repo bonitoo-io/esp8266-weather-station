@@ -38,7 +38,7 @@ typedef struct OpenWeatherMapCurrentData {
   String description;
   // "icon": "09d"
   String icon;
-  String iconMeteoCon;
+  char iconMeteoCon;
   // "temp": 290.56,
   float temp;
   // "pressure": 1013,
@@ -93,13 +93,14 @@ class OpenWeatherMapCurrent: public JsonListener {
     void setLanguage(String language) { this->language = language; }
     String getLanguage() { return language; }
     
-    String getMeteoconIcon(String icon);
+    static char getMeteoconIcon(const String& icon);
     virtual void whitespace(char c);
 
     virtual void startDocument();
 
     virtual void key(String key);
 
+    static int8_t getArrIndex( const char* s, const char* arr);
     virtual void value(String value);
 
     virtual void endArray();
