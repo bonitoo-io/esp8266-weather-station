@@ -659,28 +659,28 @@ SunMoonCalc::MoonPhase SunMoonCalc::calculateMoonPhase(double lunarAge) const {
   if (lunarAge >= 0 && lunarAge <= LUNAR_CYCLE_DAYS
       && (lunarAge < 1 || lunarAge > LUNAR_CYCLE_DAYS - 1)) {
     moonPhase.index = 0;
-    moonPhase.name = "New Moon";
+    moonPhase.name = String(F("New Moon"));
   } else if (lunarAge >= 1 && lunarAge < 6.4) {
     moonPhase.index = 1;
-    moonPhase.name = "Waxing Crescent";
+    moonPhase.name = String(F("Waxing Crescent"));
   } else if (lunarAge >= 6.4 && lunarAge < 8.4) {
     moonPhase.index = 2;
-    moonPhase.name = "First Quarter";
+    moonPhase.name = String(F("First Quarter"));
   } else if (lunarAge >= 8.4 && lunarAge < 13.8) {
     moonPhase.index = 3;
-    moonPhase.name = "Waxing Gibbous";
+    moonPhase.name = String(F("Waxing Gibbous"));
   } else if (lunarAge >= 13.8 && lunarAge < 15.8) {
     moonPhase.index = 4;
-    moonPhase.name = "Full Moon";
+    moonPhase.name = String(F("Full Moon"));
   } else if (lunarAge >= 15.8 && lunarAge < 21.1) {
     moonPhase.index = 5;
-    moonPhase.name = "Waning Gibbous";
+    moonPhase.name = String(F("Waning Gibbous"));
   } else if (lunarAge >= 21.1 && lunarAge < 23.1) {
     moonPhase.index = 6;
-    moonPhase.name = "Last/Third Quarter";
+    moonPhase.name = String(F("Last/Third Quarter"));
   } else if (lunarAge >= 23.1 && lunarAge <= LUNAR_CYCLE_DAYS - 1) {
     moonPhase.index = 7;
-    moonPhase.name = "Waning Crescent";
+    moonPhase.name = String(F("Waning Crescent"));
   }
   return moonPhase;
 }
