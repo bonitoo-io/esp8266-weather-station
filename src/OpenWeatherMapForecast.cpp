@@ -29,21 +29,21 @@
 OpenWeatherMapForecast::OpenWeatherMapForecast() {
 }
 
-uint8_t OpenWeatherMapForecast::updateForecasts(OpenWeatherMapForecastData *data, String appId, String location, uint8_t maxForecasts) {
+uint8_t OpenWeatherMapForecast::updateForecasts(OpenWeatherMapForecastData *data, const String& appId, const String& location, uint8_t maxForecasts) {
   this->maxForecasts = maxForecasts;
   return doUpdate(data, buildPath(appId, String(F("q=")) + location));
 }
 
-uint8_t OpenWeatherMapForecast::updateForecastsById(OpenWeatherMapForecastData *data, String appId, String locationId, uint8_t maxForecasts) {
+uint8_t OpenWeatherMapForecast::updateForecastsById(OpenWeatherMapForecastData *data, const String& appId, const String& locationId, uint8_t maxForecasts) {
   this->maxForecasts = maxForecasts;
   return doUpdate(data, buildPath(appId, String(F("id=")) + locationId));
 }
 
-String OpenWeatherMapForecast::buildPath(String appId, String locationParameter) {
+String OpenWeatherMapForecast::buildPath(const String& appId, const String& locationParameter) {
   return String(F("/data/2.5/forecast?")) + locationParameter + String(F("&appid=")) + appId + String(F("&units=")) + (metric ? String(F("metric")) : String(F("imperial"))) + String(F("&lang=")) + language;
 }
 
-uint8_t OpenWeatherMapForecast::doUpdate(OpenWeatherMapForecastData *data, String path) {
+uint8_t OpenWeatherMapForecast::doUpdate(OpenWeatherMapForecastData *data, const String& path) {
   unsigned long lostTest = 10000UL;
   unsigned long lost_do = millis();
   this->weatherItemCounter = 0;

@@ -29,19 +29,19 @@ OpenWeatherMapCurrent::OpenWeatherMapCurrent() {
 
 }
 
-void OpenWeatherMapCurrent::updateCurrent(OpenWeatherMapCurrentData *data, String appId, String location) {
+void OpenWeatherMapCurrent::updateCurrent(OpenWeatherMapCurrentData *data, const String& appId, const String& location) {
   doUpdate(data, buildPath(appId, String(F("q=")) + location));
 }
 
-void OpenWeatherMapCurrent::updateCurrentById(OpenWeatherMapCurrentData *data, String appId, String locationId) {
+void OpenWeatherMapCurrent::updateCurrentById(OpenWeatherMapCurrentData *data, const String& appId, const String& locationId) {
   doUpdate(data, buildPath(appId, String(F("id=")) + locationId));
 }
 
-String OpenWeatherMapCurrent::buildPath(String appId, String locationParameter) {
+String OpenWeatherMapCurrent::buildPath(const String& appId, const String& locationParameter) {
   return String(F("/data/2.5/weather?")) + locationParameter + String(F("&appid=")) + appId + String(F("&units=")) + (metric ? String(F("metric")) : String(F("imperial"))) + String(F("&lang=")) + language;
 }
 
-void OpenWeatherMapCurrent::doUpdate(OpenWeatherMapCurrentData *data, String path) {
+void OpenWeatherMapCurrent::doUpdate(OpenWeatherMapCurrentData *data, const String& path) {
   unsigned long lostTest = 10000UL;
   unsigned long lost_do = millis();
   this->weatherItemCounter = 0;

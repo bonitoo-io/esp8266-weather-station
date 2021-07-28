@@ -80,18 +80,18 @@ class OpenWeatherMapCurrent: public JsonListener {
     boolean metric = true;
     String language;
 
-    void doUpdate(OpenWeatherMapCurrentData *data, String path);
-    String buildPath(String appId, String locationParameter);
+    void doUpdate(OpenWeatherMapCurrentData *data, const String& path);
+    String buildPath(const String& appId, const String& locationParameter);
 
   public:
     OpenWeatherMapCurrent();
-    void updateCurrent(OpenWeatherMapCurrentData *data, String appId, String location);
-    void updateCurrentById(OpenWeatherMapCurrentData *data, String appId, String locationId);
+    void updateCurrent(OpenWeatherMapCurrentData *data, const String& appId, const String& location);
+    void updateCurrentById(OpenWeatherMapCurrentData *data, const String& appId, const String& locationId);
 
     void setMetric(boolean metric) {this->metric = metric;}
     boolean isMetric() { return metric; }
-    void setLanguage(String language) { this->language = language; }
-    String getLanguage() { return language; }
+    void setLanguage( const String& language) { this->language = language; }
+    const String& getLanguage() { return language; }
     static char getMeteoconIcon(const String& icon);
 
     virtual void whitespace(char c);
