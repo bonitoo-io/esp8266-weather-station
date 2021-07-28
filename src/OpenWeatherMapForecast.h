@@ -69,8 +69,7 @@ typedef struct OpenWeatherMapForecastData {
   // },"sys":{"pod":"d"}
   // dt_txt: "2018-05-23 09:00:00"
   String observationTimeText;
-
-} OpenWeatherMapForecastData;
+};
 
 class OpenWeatherMapForecast: public JsonListener {
   private:
@@ -95,7 +94,6 @@ class OpenWeatherMapForecast: public JsonListener {
     OpenWeatherMapForecast();
     uint8_t updateForecasts(OpenWeatherMapForecastData *data, String appId, String location, uint8_t maxForecasts);
     uint8_t updateForecastsById(OpenWeatherMapForecastData *data, String appId, String locationId, uint8_t maxForecasts);
-
     void setMetric(boolean metric) { this->metric = metric; }
     boolean isMetric() { return this->metric; }
     void setLanguage(String language) { this->language = language; }
@@ -104,24 +102,15 @@ class OpenWeatherMapForecast: public JsonListener {
       this->allowedHours = allowedHours;
       this->allowedHoursCount = allowedHoursCount;
     }
-
-
     char getMeteoconIcon(const String& icon);
+
     virtual void whitespace(char c);
-
     virtual void startDocument();
-
     virtual void key(String key);
-
     virtual void value(String value);
-
     virtual void endArray();
-
     virtual void endObject();
-
     virtual void endDocument();
-
     virtual void startArray();
-
     virtual void startObject();
 };

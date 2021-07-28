@@ -67,7 +67,7 @@ typedef struct OpenWeatherMapCurrentData {
   uint32_t sunset;
   // "name": "Zurich",
   String cityName;
-} OpenWeatherMapCurrentData;
+};
 
 class OpenWeatherMapCurrent: public JsonListener {
   private:
@@ -92,24 +92,16 @@ class OpenWeatherMapCurrent: public JsonListener {
     boolean isMetric() { return metric; }
     void setLanguage(String language) { this->language = language; }
     String getLanguage() { return language; }
-    
     static char getMeteoconIcon(const String& icon);
+
     virtual void whitespace(char c);
-
     virtual void startDocument();
-
     virtual void key(String key);
-
     static int8_t getArrIndex( const char* s, const char* arr);
     virtual void value(String value);
-
     virtual void endArray();
-
     virtual void endObject();
-
     virtual void endDocument();
-
     virtual void startArray();
-
     virtual void startObject();
 };
