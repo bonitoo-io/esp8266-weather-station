@@ -58,15 +58,15 @@ void OpenWeatherMapCurrent::doUpdate(OpenWeatherMapCurrentData *data, const Stri
     client.print(String(F("GET ")) + path + String(F(" HTTP/1.1\r\n")) +
                  String(F("Host: ")) + host + String(F("\r\n")) +
                  String(F("Connection: close\r\n\r\n")));
-
+                 
     while (client.connected() || client.available()) {
+      if ((millis() - lost_do) > lostTest) {
+        Serial.println(F("[HTTP] lost in client with a timeout"));
+        client.stop();
+        this->data = nullptr;
+        return;
+      }
       if (client.available()) {
-        if ((millis() - lost_do) > lostTest) {
-          Serial.println(F("[HTTP] lost in client with a timeout"));
-          client.stop();
-          this->data = nullptr;
-          return;
-        }
         c = client.read();
         if (c == '{' || c == '[') {
           isBody = true;
