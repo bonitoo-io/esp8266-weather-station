@@ -25,7 +25,7 @@
 #include <JsonListener.h>
 #include <JsonStreamingParser.h>
 
-typedef struct OpenWeatherMapCurrentData {
+struct OpenWeatherMapCurrentData {
   // "lon": 8.54,
   float lon;
   // "lat": 47.37

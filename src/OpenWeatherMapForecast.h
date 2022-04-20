@@ -26,7 +26,7 @@
 #include <JsonStreamingParser.h>
 #include <time.h>
 
-typedef struct OpenWeatherMapForecastData {
+struct OpenWeatherMapForecastData {
   // {"dt":1527066000,
   uint32_t observationTime;
   // "main":{
