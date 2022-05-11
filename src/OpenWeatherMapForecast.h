@@ -94,6 +94,7 @@ class OpenWeatherMapForecast: public JsonListener {
     OpenWeatherMapForecast();
     uint8_t updateForecasts(OpenWeatherMapForecastData *data, const String& appId, const String& location, uint8_t maxForecasts);
     uint8_t updateForecastsById(OpenWeatherMapForecastData *data, const String& appId, const String& locationId, uint8_t maxForecasts);
+    uint8_t updateForecastsByLoc(OpenWeatherMapForecastData *data, const String& appId, float lat, float lon, uint8_t maxForecasts);
     void setMetric(boolean metric) { this->metric = metric; }
     boolean isMetric() { return this->metric; }
     void setLanguage(const String& language) { this->language = language; }

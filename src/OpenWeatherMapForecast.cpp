@@ -39,6 +39,11 @@ uint8_t OpenWeatherMapForecast::updateForecastsById(OpenWeatherMapForecastData *
   return doUpdate(data, buildPath(appId, String(F("id=")) + locationId));
 }
 
+uint8_t OpenWeatherMapForecast::updateForecastsByLoc(OpenWeatherMapForecastData *data, const String& appId, float lat, float lon, uint8_t maxForecasts) {
+  this->maxForecasts = maxForecasts;
+  return doUpdate(data, buildPath(appId, String(F("lat=")) + String(lat,6) + String(F("&lon=")) + String(lon,6)));
+}
+
 String OpenWeatherMapForecast::buildPath(const String& appId, const String& locationParameter) {
   return String(F("/data/2.5/forecast?")) + locationParameter + String(F("&appid=")) + appId + String(F("&units=")) + (metric ? String(F("metric")) : String(F("imperial"))) + String(F("&lang=")) + language;
 }
