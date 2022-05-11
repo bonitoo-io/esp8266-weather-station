@@ -29,19 +29,23 @@ OpenWeatherMapCurrent::OpenWeatherMapCurrent() {
 
 }
 
-void OpenWeatherMapCurrent::updateCurrent(OpenWeatherMapCurrentData *data, const String& appId, const String& location) {
-  doUpdate(data, buildPath(appId, String(F("q=")) + location));
+bool OpenWeatherMapCurrent::updateCurrent(OpenWeatherMapCurrentData *data, const String& appId, const String& location) {
+  return doUpdate(data, buildPath(appId, String(F("q=")) + location));
 }
 
-void OpenWeatherMapCurrent::updateCurrentById(OpenWeatherMapCurrentData *data, const String& appId, const String& locationId) {
-  doUpdate(data, buildPath(appId, String(F("id=")) + locationId));
+bool OpenWeatherMapCurrent::updateCurrentById(OpenWeatherMapCurrentData *data, const String& appId, const String& locationId) {
+  return doUpdate(data, buildPath(appId, String(F("id=")) + locationId));
+}
+
+bool OpenWeatherMapCurrent::updateCurrentByLoc(OpenWeatherMapCurrentData *data, const String& appId, float lat, float lon) {
+  return doUpdate(data, buildPath(appId, String(F("lat=")) + String(lat,6) + String(F("&lon=")) + String(lon,6)));
 }
 
 String OpenWeatherMapCurrent::buildPath(const String& appId, const String& locationParameter) {
   return String(F("/data/2.5/weather?")) + locationParameter + String(F("&appid=")) + appId + String(F("&units=")) + (metric ? String(F("metric")) : String(F("imperial"))) + String(F("&lang=")) + language;
 }
 
-void OpenWeatherMapCurrent::doUpdate(OpenWeatherMapCurrentData *data, const String& path) {
+bool OpenWeatherMapCurrent::doUpdate(OpenWeatherMapCurrentData *data, const String& path) {
   unsigned long lostTest = 10000UL;
   unsigned long lost_do = millis();
   this->weatherItemCounter = 0;
@@ -53,21 +57,20 @@ void OpenWeatherMapCurrent::doUpdate(OpenWeatherMapCurrentData *data, const Stri
   WiFiClient client;
   if(client.connect(host.c_str(), port)) {
     bool isBody = false;
-    char c;
-
     client.print(String(F("GET ")) + path + String(F(" HTTP/1.1\r\n")) +
                  String(F("Host: ")) + host + String(F("\r\n")) +
                  String(F("Connection: close\r\n\r\n")));
                  
     while (client.connected() || client.available()) {
-      if ((millis() - lost_do) > lostTest) {
-        Serial.println(F("[HTTP] lost in client with a timeout"));
-        client.stop();
-        this->data = nullptr;
-        return;
-      }
       if (client.available()) {
-        c = client.read();
+        if ((millis() - lost_do) > lostTest) {
+          Serial.println(F("[HTTP] lost in client with a timeout"));
+          client.stop();
+          this->data = nullptr;
+          return false;
+        }
+        char c = client.read();
+        //Serial.print(c);
         if (c == '{' || c == '[') {
           isBody = true;
         }
@@ -81,8 +84,10 @@ void OpenWeatherMapCurrent::doUpdate(OpenWeatherMapCurrentData *data, const Stri
     client.stop();
   } else {
     Serial.println(F("[HTTP] failed to connect to host"));
+    return false;
   }
   this->data = nullptr;
+  return !isnan(data->temp);
 }
 
 void OpenWeatherMapCurrent::whitespace(char c) {
@@ -109,7 +114,7 @@ int8_t OpenWeatherMapCurrent::getArrIndex( const char* s, const char* arr) {
         return index;
 		  }
     } else {
-      while (pgm_read_byte( arr + i) != '\0') { //skip rest of the unmatching key
+      while (pgm_read_byte( arr + i) != '\0') { //skip rest of the un-matching key
 			  //Serial.println(String((char)pgm_read_byte( arr + i)) + " " + String(i));
         i++;
 			}
