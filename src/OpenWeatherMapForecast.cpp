@@ -1,17 +1,17 @@
 /**The MIT License (MIT)
- 
+
  Copyright (c) 2018 by ThingPulse Ltd., https://thingpulse.com
- 
+
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  copies of the Software, and to permit persons to whom the Software is
  furnished to do so, subject to the following conditions:
- 
+
  The above copyright notice and this permission notice shall be included in all
  copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -68,13 +68,13 @@ uint8_t OpenWeatherMapForecast::doUpdate(OpenWeatherMapForecastData *data, const
                  String(F("Connection: close\r\n\r\n")));
 
     while (client.connected() || client.available()) {
-      if ((millis() - lost_do) > lostTest) {
-        Serial.println(F("[HTTP] lost in client with a timeout"));
-        client.stop();
-        this->data = nullptr;
-        return currentForecast;
-      }
       if (client.available()) {
+        if ((millis() - lost_do) > lostTest) {
+          Serial.println(F("[HTTP] lost in client with a timeout"));
+          client.stop();
+          this->data = nullptr;
+          return 0; //timeout - error - we do not know how much data we loaded
+        }
         c = client.read();
         if (c == '{' || c == '[') {
           isBody = true;
@@ -112,7 +112,7 @@ void OpenWeatherMapForecast::value(String value) {
     return;
   }
 	tKeysFor k = (tKeysFor) OpenWeatherMapCurrent::getArrIndex( currentKey.c_str(), sKeysFor);
-	
+
   // {"dt":1527066000,  uint32_t observationTime;
   if (k == s_dt) {
     data[currentForecast].observationTime = value.toInt();
@@ -135,11 +135,11 @@ void OpenWeatherMapForecast::value(String value) {
   if (!isCurrentForecastAllowed) {
     return;
   }
-	
-	switch (k) {	
+
+	switch (k) {
 		// "main":{
 		//   "temp":17.35, float temp;
-		case s_temp: 
+		case s_temp:
 			data[currentForecast].temp = value.toFloat();
 			// initialize potentially empty values:
 			data[currentForecast].rain = 0;
@@ -176,7 +176,7 @@ void OpenWeatherMapForecast::value(String value) {
 			currentForecast++;
 		break;
 	}
-	
+
   if (currentParent == String(F("weather"))) {
     switch (k) {
       // "id": 521, weatherId weatherId;
@@ -187,7 +187,7 @@ void OpenWeatherMapForecast::value(String value) {
       case s_description: data[currentForecast].description = value; break;
       // "icon": "09d" String icon;
       //String iconMeteoCon;
-      case s_icon: data[currentForecast].icon = value; data[currentForecast].iconMeteoCon = getMeteoconIcon(value); break;			
+      case s_icon: data[currentForecast].icon = value; data[currentForecast].iconMeteoCon = getMeteoconIcon(value); break;
     }
   }
 }
