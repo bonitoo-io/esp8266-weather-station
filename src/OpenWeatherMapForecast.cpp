@@ -68,13 +68,13 @@ uint8_t OpenWeatherMapForecast::doUpdate(OpenWeatherMapForecastData *data, const
                  String(F("Connection: close\r\n\r\n")));
 
     while (client.connected() || client.available()) {
+      if ((millis() - lost_do) > lostTest) {
+        Serial.println(F("[HTTP] lost in client with a timeout"));
+        client.stop();
+        this->data = nullptr;
+        return 0; //timeout - error - we do not know how much data we loaded
+      }
       if (client.available()) {
-        if ((millis() - lost_do) > lostTest) {
-          Serial.println(F("[HTTP] lost in client with a timeout"));
-          client.stop();
-          this->data = nullptr;
-          return 0; //timeout - error - we do not know how much data we loaded
-        }
         c = client.read();
         if (c == '{' || c == '[') {
           isBody = true;

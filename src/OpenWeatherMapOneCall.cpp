@@ -65,13 +65,13 @@ void OpenWeatherMapOneCall::doUpdate(OpenWeatherMapOneCallData *data, String pat
                         "Connection: close\r\n\r\n");
 
     while (client.connected() || client.available()) {
+      if ((millis() - lost_do) > lostTest) {
+        Serial.println("[HTTP] lost in client with a timeout");
+        client.stop();
+        this->data = nullptr;
+        return;
+      }
       if (client.available()) {
-        if ((millis() - lost_do) > lostTest) {
-          Serial.println("[HTTP] lost in client with a timeout");
-          client.stop();
-          this->data = nullptr;
-          return;
-        }
         c = client.read();
         if (c == '{' || c == '[') {
           isBody = true;

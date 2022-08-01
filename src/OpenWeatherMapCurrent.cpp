@@ -62,13 +62,13 @@ bool OpenWeatherMapCurrent::doUpdate(OpenWeatherMapCurrentData *data, const Stri
                  String(F("Connection: close\r\n\r\n")));
                  
     while (client.connected() || client.available()) {
+      if ((millis() - lost_do) > lostTest) {
+        Serial.println(F("[HTTP] lost in client with a timeout"));
+        client.stop();
+        this->data = nullptr;
+        return false;
+      }
       if (client.available()) {
-        if ((millis() - lost_do) > lostTest) {
-          Serial.println(F("[HTTP] lost in client with a timeout"));
-          client.stop();
-          this->data = nullptr;
-          return false;
-        }
         char c = client.read();
         //Serial.print(c);
         if (c == '{' || c == '[') {
