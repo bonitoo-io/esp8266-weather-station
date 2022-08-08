@@ -147,7 +147,10 @@ void OpenWeatherMapCurrent::value(String value) {
       case s_icon: 
 			  this->data->icon = value;
 				this->data->iconMeteoCon = getMeteoconIcon(value);
-			break;
+		  	break;
+      default:
+        //ignore others
+        break;
     }
   }
 
@@ -184,6 +187,9 @@ void OpenWeatherMapCurrent::value(String value) {
 		case s_sunset: this->data->sunset = value.toInt(); break;
 		// "name": "Zurich", String cityName;
 		case s_name: this->data->cityName = value; break;
+    default:
+      //ignore others
+      break;
   }
 }
 

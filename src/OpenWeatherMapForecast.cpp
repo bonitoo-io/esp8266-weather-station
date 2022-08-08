@@ -174,7 +174,10 @@ void OpenWeatherMapForecast::value(String value) {
 			data[currentForecast].observationTimeText = value;
 			// this is not super save, if there is no dt_txt item we'll never get all forecasts;
 			currentForecast++;
-		break;
+		  break;
+    default:
+      //ignore others
+      break;
 	}
 
   if (currentParent == String(F("weather"))) {
@@ -188,6 +191,9 @@ void OpenWeatherMapForecast::value(String value) {
       // "icon": "09d" String icon;
       //String iconMeteoCon;
       case s_icon: data[currentForecast].icon = value; data[currentForecast].iconMeteoCon = getMeteoconIcon(value); break;
+      default:
+        //ignore others
+        break;
     }
   }
 }
